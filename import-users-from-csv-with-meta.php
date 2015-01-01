@@ -130,36 +130,43 @@ function acui_import_users($file, $role){?>
 						$password = $data[1];
 						$email = $data[2];
 
-						if(username_exists($username)):
-							echo '<script>alert("Username: ' . $username . ' already in use, we are going to skip");</script>';
-							continue;
-						else:
+						if( username_exists( $username ) ) {
+							$user = get_user_by( 'login', $username );
+							if( $user )
+								$user_id = $user->ID;
+						} else {
 							$user_id = wp_create_user($username, $password, $email);
-
-							if(is_wp_error($user_id)){
+							
+							if( is_wp_error( $user_id ) || !$user_id ){
 								echo '<script>alert("Problems with user: ' . $username . ', we are going to skip");</script>';
 								continue;
 							}
-
-							if(!( in_array("administrator", acui_get_roles($user_id), FALSE) || is_multisite() && is_super_admin( $user_id ) ))
-								wp_update_user(array ('ID' => $user_id, 'role' => $role)) ;
 							
-							if($columns > 3)
-								for($i=3; $i<$columns; $i++):
-									if(in_array($headers[$i], $wp_users_fields))
-										wp_update_user( array( 'ID' => $user_id, $headers[$i] => $data[$i] ) );
-									else
-										update_user_meta($user_id, $headers[$i], $data[$i]);
-								endfor;
+							if( !( in_array("administrator", acui_get_roles($user_id), FALSE) || is_multisite() && is_super_admin( $user_id ) ))
+								wp_update_user(array ('ID' => $user_id, 'role' => $role)) ;
+						}
+						
+						if( !$user_id ){
+							echo '<script>alert("Problems with user: ' . $username . ', we are going to skip");</script>';
+							continue;
+						}
+						
+						if($columns > 3)
+							for($i=3; $i<$columns; $i++):
+								if( in_array( $headers[$i], $wp_users_fields ) )
+									wp_update_user( array( 'ID' => $user_id, $headers[$i] => $data[$i] ) );
+								else
+									update_user_meta( $user_id, $headers[$i], $data[$i] );
+							endfor;
 
-							echo "<tr><td>" . ($row - 1) . "</td>";
-							foreach ($data as $element)
-								echo "<td>$element</td>";
+						echo "<tr><td>" . ($row - 1) . "</td>";
+						foreach ($data as $element)
+							echo "<td>$element</td>";
 
-							echo "</tr>\n";
+						echo "</tr>\n";
 
-							flush();
-						endif;						
+						flush();
+												
 					endif;
 
 					$row++;						
